@@ -1,7 +1,8 @@
 import { FrameCallTraceFrame } from "@skandha/types/lib/executor/validation/ethrexFrameTx.js";
 
 /**
- * Virtual Precompile Rule (VPR): the canonical mempool rules, with
+ * Virtual precompiles, the Crypto-Agility Mempool's first relaxation: the
+ * canonical mempool rules, with
  * MAX_VERIFY_GAS raised by a credit for calls into listed signature
  * verifiers, so they cost what a precompile for the same scheme would.
  *

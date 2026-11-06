@@ -230,7 +230,7 @@ export type StructuralRulesResult = { valid: true } | { valid: false; reason: st
  *   6. sum(limits.execution) over the prefix + intrinsic signature-validation
  *      cost <= MAX_VERIFY_GAS; sum(limits.state) over the prefix <=
  *      MAX_VERIFY_STATE_GAS. `extraVerifyGas` raises MAX_VERIFY_GAS for this
- *      transaction (the Virtual Precompile Rule's credit, virtualPrecompiles.ts).
+ *      transaction (the virtual precompile credit, virtualPrecompiles.ts).
  *   8. There must not be a VERIFY frame after the validation prefix.
  *
  * Items 3, 5 and 6 are checked over `tx.frames[0..lastPrefixIndex]` (the

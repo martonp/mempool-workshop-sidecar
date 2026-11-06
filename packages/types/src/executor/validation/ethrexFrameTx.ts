@@ -101,8 +101,8 @@ export interface FrameCallTraceFrame {
   /**
    * Gas this scope consumed, including its nested calls, as a 0x-hex u64
    * (ethrex's `serde_utils::u64::hex_str`). Absent on an ethrex without the
-   * per-call gas patch (`martonp/ethrex` branch `vpr-call-gas`); the Virtual
-   * Precompile Rule then falls back to configured costs (virtualPrecompiles.ts).
+   * per-call gas patch (`martonp/ethrex` branch `vpr-call-gas`); the sidecar
+   * then falls back to configured costs (virtualPrecompiles.ts).
    */
   gasUsed?: `0x${string}`;
   /**

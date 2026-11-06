@@ -318,16 +318,16 @@ export class FrameTxValidationService {
     // independently.
     const lastPrefixIndex = Math.max(...prefix.frames.map((f) => f.frameIndex));
 
-    // Virtual Precompile Rule: calls into listed verifiers raise the prefix's
+    // Virtual precompiles: calls into listed verifiers raise the prefix's
     // MAX_VERIFY_GAS budget (see virtualPrecompiles.ts).
     // Without a trace (the simulation failed) the credit is 0, so such a
     // transaction can fail here before its simulation error is reported.
-    const vprCredit = virtualPrecompileCredit(
+    const precompileCredit = virtualPrecompileCredit(
       selectPrefixTrace(simResult, lastPrefixIndex).epTopLevelCalls,
       VIRTUAL_PRECOMPILES
     );
 
-    const structural = validateStructuralRules(tx, prefix, vprCredit);
+    const structural = validateStructuralRules(tx, prefix, precompileCredit);
     if (!structural.valid) {
       throw collector.failed(
         EXPLORER_RULES.STRUCTURE,
@@ -337,7 +337,7 @@ export class FrameTxValidationService {
     collector.pass(
       EXPLORER_RULES.STRUCTURE,
       {},
-      vprCredit > BigInt(0) ? `virtual precompile credit ${vprCredit} gas` : undefined
+      precompileCredit > BigInt(0) ? `virtual precompile credit ${precompileCredit} gas` : undefined
     );
 
     // Per EIP-8141 §Behavior: "For each sig in tx.signatures, ensure

@@ -1,7 +1,7 @@
 import { EthrexAccessedSlots } from "@skandha/types/lib/executor/validation/ethrexFrameTx.js";
 
 /**
- * Break signals, the VPR's second relaxation: validation may read the one
+ * Break signals, the Crypto-Agility Mempool's second relaxation: validation may read the one
  * state slot of a listed BreakSignal contract without a stake. A wallet
  * reads it to know whether a scheme has been signalled broken, and then
  * requires its backup scheme too.
