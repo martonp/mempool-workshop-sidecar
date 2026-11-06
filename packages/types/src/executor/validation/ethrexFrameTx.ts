@@ -99,6 +99,13 @@ export interface FrameCallTraceFrame {
   contractSize: { [address: string]: EthrexContractSizeInfo };
   outOfGas: boolean;
   /**
+   * Gas this scope consumed, including its nested calls, as a 0x-hex u64
+   * (ethrex's `serde_utils::u64::hex_str`). Absent on an ethrex without the
+   * per-call gas patch (`martonp/ethrex` branch `vpr-call-gas`); the Virtual
+   * Precompile Rule then falls back to configured costs (virtualPrecompiles.ts).
+   */
+  gasUsed?: `0x${string}`;
+  /**
    * Keccak preimages observed up to (and including) this frame's root scope
    * closing. NOT reset per frame - accumulates across the whole transaction,
    * so the LAST `FrameEntry` in a result's `erc7562Trace` array carries the
