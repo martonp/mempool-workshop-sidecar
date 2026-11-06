@@ -11,13 +11,13 @@ const SPHINCS = "0x3333333333333333333333333333333333333333" as const;
 const OTHER = "0x4444444444444444444444444444444444444444" as const;
 
 const PRECOMPILES: VirtualPrecompile[] = [
-  { address: FALCON, precompileGas: 3_000, fallback: { gasUsed: 700_000, minOpcodes: 1_000 } },
-  { address: SPHINCS, precompileGas: 4_000, fallback: { gasUsed: 110_000, minOpcodes: 100 } },
+  { address: FALCON, precompileGas: 3_000, fallbackGasUsed: 700_000 },
+  { address: SPHINCS, precompileGas: 4_000, fallbackGasUsed: 110_000 },
 ];
 
 const call = (
   to: `0x${string}`,
-  opts: { calls?: FrameCallTraceFrame[]; gasUsed?: `0x${string}`; opcodes?: number; outOfGas?: boolean } = {}
+  opts: { calls?: FrameCallTraceFrame[]; gasUsed?: `0x${string}` } = {}
 ): FrameCallTraceFrame => ({
   from: WALLET,
   to,
@@ -26,9 +26,9 @@ const call = (
   calls: opts.calls ?? [],
   accessedSlots: { reads: {}, writes: {}, transientReads: {}, transientWrites: {} },
   extCodeAccessInfo: [],
-  usedOpcodes: { "86": opts.opcodes ?? 10_000 },
+  usedOpcodes: { "86": 10_000 },
   contractSize: {},
-  outOfGas: opts.outOfGas ?? false,
+  outOfGas: false,
   gasUsed: opts.gasUsed,
 });
 const credit = (...roots: FrameCallTraceFrame[]) => virtualPrecompileCredit(roots, PRECOMPILES);
@@ -63,25 +63,12 @@ describe("virtualPrecompileCredit", () => {
   });
 
   describe("fallback while ethrex reports no gasUsed", () => {
-    it("credits the configured gasUsed for a full verification", () => {
+    it("credits the configured gasUsed", () => {
       expect(credit(call(WALLET, { calls: [call(FALCON), call(SPHINCS)] }))).toBe(697_000n + 106_000n);
     });
 
     it("treats a gasUsed of 0 as not reported", () => {
       expect(credit(call(WALLET, { calls: [call(FALCON, { gasUsed: "0x0" })] }))).toBe(697_000n);
-    });
-
-    it("counts executed opcodes over the call's whole subtree", () => {
-      const split = call(FALCON, { opcodes: 600, calls: [call(OTHER, { opcodes: 400 })] });
-      expect(credit(call(WALLET, { calls: [split] }))).toBe(697_000n);
-    });
-
-    it("credits nothing for a call that did less work than a verification", () => {
-      expect(credit(call(WALLET, { calls: [call(FALCON, { opcodes: 999 })] }))).toBe(0n);
-    });
-
-    it("credits nothing for a call that ran out of gas", () => {
-      expect(credit(call(WALLET, { calls: [call(FALCON, { outOfGas: true })] }))).toBe(0n);
     });
   });
 });

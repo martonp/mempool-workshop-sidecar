@@ -15,11 +15,11 @@ export interface VirtualPrecompile {
   precompileGas: number;
   /**
    * HACK until ethrex's ERC-7562 frame tracer reports per-call gasUsed:
-   * one full verification, measured on a devnet. Without a reported
-   * gasUsed, a call is credited `gasUsed` if it executed at least
-   * `minOpcodes` opcodes and did not run out of gas.
+   * the most expensive verification measured on a devnet, credited to every
+   * call that reports no gasUsed. It checks nothing, so a call that does no
+   * work earns it too: for a trusted devnet only.
    */
-  fallback: { gasUsed: number; minOpcodes: number };
+  fallbackGasUsed: number;
 }
 
 export const VIRTUAL_PRECOMPILES: VirtualPrecompile[] = [
@@ -27,13 +27,13 @@ export const VIRTUAL_PRECOMPILES: VirtualPrecompile[] = [
     // Falcon-512, ZKNOX falcon8. EIP-8052: hash-to-point 1000 + core 2000.
     address: "0x082195fEDF8BB5254A1dB077b17f1aEd77697A59",
     precompileGas: 3_000,
-    fallback: { gasUsed: 635_154, minOpcodes: 35_707 },
+    fallbackGasUsed: 635_154,
   },
   {
     // SPHINCS- C13, SphincsC13Asm. No precompile proposal; an estimate.
     address: "0xa0a705b558Be9bEEC5B8BD7D5A96C792232be6A7",
     precompileGas: 4_000,
-    fallback: { gasUsed: 97_298, minOpcodes: 3_182 },
+    fallbackGasUsed: 97_298,
   },
 ];
 
@@ -53,20 +53,9 @@ export function virtualPrecompileCredit(
     const listed = call.to ? byAddress.get(call.to.toLowerCase()) : undefined;
     if (!listed) return (call.calls ?? []).reduce((sum, c) => sum + credit(c), zero);
     const reported = call.gasUsed ? BigInt(call.gasUsed) : zero;
-    const used = reported > zero ? reported : fallbackGasUsed(call, listed);
+    const used = reported > zero ? reported : BigInt(listed.fallbackGasUsed);
     const saved = used - BigInt(listed.precompileGas);
     return saved > zero ? saved : zero;
   };
   return prefixCalls.reduce((sum, root) => sum + credit(root), zero);
-}
-
-/** HACK (see VirtualPrecompile.fallback): a listed call's gas when ethrex reports none. */
-function fallbackGasUsed(call: FrameCallTraceFrame, listed: VirtualPrecompile): bigint {
-  if (call.outOfGas || executedOpcodes(call) < listed.fallback.minOpcodes) return BigInt(0);
-  return BigInt(listed.fallback.gasUsed);
-}
-
-function executedOpcodes(call: FrameCallTraceFrame): number {
-  const own = Object.values(call.usedOpcodes).reduce((sum, n) => sum + n, 0);
-  return (call.calls ?? []).reduce((sum, c) => sum + executedOpcodes(c), own);
 }
