@@ -241,6 +241,22 @@ describe("validateStructuralRules", () => {
     }
   });
 
+  it("raises MAX_VERIFY_GAS by the virtual precompile credit (item 6)", () => {
+    const bigFrame: Frame = {
+      ...verifyFrame(APPROVE_SCOPE.EXECUTION),
+      limits: { execution: MAX_VERIFY_GAS + 10_000n, state: 0n },
+    };
+    const frames = [bigFrame, verifyFrame(APPROVE_SCOPE.PAYMENT)];
+    const tx = baseTx(frames);
+    const prefix = recognizeValidationPrefix(frames, SENDER)!;
+    const rejected = validateStructuralRules(tx, prefix, 1_000n);
+    expect(rejected.valid).toBe(false);
+    if (!rejected.valid) {
+      expect(rejected.reason).toMatch(/virtual precompile credit 1000/);
+    }
+    expect(validateStructuralRules(tx, prefix, 1_000_000n).valid).toBe(true);
+  });
+
   it("rejects when limits.execution is within budget alone but signature-verification cost pushes the total over MAX_VERIFY_GAS (item 6)", () => {
     // A P256 signature costs 6700 gas (see SIGNATURE_VERIFICATION_GAS_COST).
     // executionSum here is MAX_VERIFY_GAS - 1, comfortably under budget on

@@ -36,6 +36,7 @@ import { CheckCollector } from "../../ExplorerService/checkCollector.js";
 import { computeSigHash } from "../../FrameTxService/codec.js";
 import { validateSignature } from "../../FrameTxService/signature.js";
 import { selectPrefixTrace } from "../erc7562TraceAdapter.js";
+import { VIRTUAL_PRECOMPILES, virtualPrecompileCredit } from "../utils/virtualPrecompiles.js";
 import {
   recognizeValidationPrefix,
   validateStructuralRules,
@@ -307,15 +308,6 @@ export class FrameTxValidationService {
     }
     collector.pass(EXPLORER_RULES.PREFIX);
 
-    const structural = validateStructuralRules(tx, prefix);
-    if (!structural.valid) {
-      throw collector.failed(
-        EXPLORER_RULES.STRUCTURE,
-        new RpcError(structural.reason, RpcErrorCodes.INVALID_USEROP)
-      );
-    }
-    collector.pass(EXPLORER_RULES.STRUCTURE);
-
     // The validation prefix's last real frame index (recognizeValidationPrefix
     // already computes each role's real frameIndex, including the shift a
     // leading expiry_verify frame introduces - see ValidationPrefixMatch).
@@ -324,6 +316,28 @@ export class FrameTxValidationService {
     // check work off the same value rather than each re-deriving it
     // independently.
     const lastPrefixIndex = Math.max(...prefix.frames.map((f) => f.frameIndex));
+
+    // Virtual Precompile Rule: calls into listed verifiers raise the prefix's
+    // MAX_VERIFY_GAS budget (see virtualPrecompiles.ts).
+    // Without a trace (the simulation failed) the credit is 0, so such a
+    // transaction can fail here before its simulation error is reported.
+    const vprCredit = virtualPrecompileCredit(
+      selectPrefixTrace(simResult, lastPrefixIndex).epTopLevelCalls,
+      VIRTUAL_PRECOMPILES
+    );
+
+    const structural = validateStructuralRules(tx, prefix, vprCredit);
+    if (!structural.valid) {
+      throw collector.failed(
+        EXPLORER_RULES.STRUCTURE,
+        new RpcError(structural.reason, RpcErrorCodes.INVALID_USEROP)
+      );
+    }
+    collector.pass(
+      EXPLORER_RULES.STRUCTURE,
+      {},
+      vprCredit > BigInt(0) ? `virtual precompile credit ${vprCredit} gas` : undefined
+    );
 
     // Per EIP-8141 §Behavior: "For each sig in tx.signatures, ensure
     // validate_signature(...) == true". This replaces safe.ts's

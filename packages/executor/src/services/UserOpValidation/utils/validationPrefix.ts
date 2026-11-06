@@ -229,7 +229,8 @@ export type StructuralRulesResult = { valid: true } | { valid: false; reason: st
  *   5. No frame in the validation prefix may have ATOMIC_BATCH_FLAG set.
  *   6. sum(limits.execution) over the prefix + intrinsic signature-validation
  *      cost <= MAX_VERIFY_GAS; sum(limits.state) over the prefix <=
- *      MAX_VERIFY_STATE_GAS.
+ *      MAX_VERIFY_STATE_GAS. `extraVerifyGas` raises MAX_VERIFY_GAS for this
+ *      transaction (the Virtual Precompile Rule's credit, virtualPrecompiles.ts).
  *   8. There must not be a VERIFY frame after the validation prefix.
  *
  * Items 3, 5 and 6 are checked over `tx.frames[0..lastPrefixIndex]` (the
@@ -247,7 +248,11 @@ export type StructuralRulesResult = { valid: true } | { valid: false; reason: st
  * rejection condition on the transaction's validity — it doesn't reject
  * anything, so it is intentionally not implemented here.
  */
-export function validateStructuralRules(tx: FrameTransaction, prefix: ValidationPrefixMatch): StructuralRulesResult {
+export function validateStructuralRules(
+  tx: FrameTransaction,
+  prefix: ValidationPrefixMatch,
+  extraVerifyGas: bigint = BigInt(0)
+): StructuralRulesResult {
   const prefixFrameIndices = prefix.frames.map((f) => f.frameIndex);
   const lastPrefixIndex = Math.max(...prefixFrameIndices);
 
@@ -285,10 +290,11 @@ export function validateStructuralRules(tx: FrameTransaction, prefix: Validation
   // per-scheme cost comes from.
   const sigCost = signatureVerificationCost(tx);
   const totalVerifyGas = executionSum + sigCost;
-  if (totalVerifyGas > MAX_VERIFY_GAS) {
+  if (totalVerifyGas > MAX_VERIFY_GAS + extraVerifyGas) {
+    const budget = extraVerifyGas > BigInt(0) ? ` + virtual precompile credit ${extraVerifyGas}` : "";
     return {
       valid: false,
-      reason: `validation prefix execution gas sum ${executionSum} + signature-verification cost ${sigCost} = ${totalVerifyGas} exceeds MAX_VERIFY_GAS ${MAX_VERIFY_GAS}`,
+      reason: `validation prefix execution gas sum ${executionSum} + signature-verification cost ${sigCost} = ${totalVerifyGas} exceeds MAX_VERIFY_GAS ${MAX_VERIFY_GAS}${budget}`,
     };
   }
   if (stateSum > MAX_VERIFY_STATE_GAS) {
