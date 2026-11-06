@@ -15,9 +15,9 @@ export interface VirtualPrecompile {
   precompileGas: number;
   /**
    * HACK until ethrex's ERC-7562 frame tracer reports per-call gasUsed:
-   * the most expensive verification measured on a devnet, credited to every
-   * call that reports no gasUsed. It checks nothing, so a call that does no
-   * work earns it too: for a trusted devnet only.
+   * a verification's gas, credited to every call that reports no gasUsed.
+   * It checks nothing, so a call that does no work earns it too: for a
+   * trusted devnet only.
    */
   fallbackGasUsed: number;
 }
@@ -27,7 +27,10 @@ export const VIRTUAL_PRECOMPILES: VirtualPrecompile[] = [
     // Falcon-512, ZKNOX falcon8. EIP-8052: hash-to-point 1000 + core 2000.
     address: "0x082195fEDF8BB5254A1dB077b17f1aEd77697A59",
     precompileGas: 3_000,
-    fallbackGasUsed: 635_154,
+    // Measured up to 635_154; raised so the credit also covers the margin a
+    // wallet declares for Falcon's 8- or 9-block hash-to-point, and for the
+    // larger deployment and checks of wallets with several schemes.
+    fallbackGasUsed: 750_000,
   },
   {
     // SPHINCS- C13, SphincsC13Asm. No precompile proposal; an estimate.
