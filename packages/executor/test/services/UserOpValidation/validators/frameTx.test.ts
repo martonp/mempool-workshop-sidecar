@@ -13,6 +13,7 @@ import {
   Frame,
   FrameTransaction,
 } from "@skandha/types/lib/contracts/FrameTx.js";
+import { BREAK_SIGNALS } from "../../../../src/services/UserOpValidation/utils/breakSignals.js";
 
 // Addresses are digit-only so viem's getAddress() checksumming is a no-op
 // (no a-f hex letters to re-case), keeping every string comparison in the
@@ -260,6 +261,38 @@ describe("FrameTxValidationService", () => {
       await expect(service.validate(tx, simResult)).rejects.toThrow(RpcError);
       await expect(service.validate(tx, simResult)).rejects.toMatchObject({
         code: RpcErrorCodes.INVALID_OPCODE,
+      });
+    });
+
+    it("an unstaked sender may read a listed break signal's slot, and only that slot", async () => {
+      // Lowercased as the trace reports it; the listed address is checksummed.
+      const signal = BREAK_SIGNALS[0].address;
+      const readOf = (slot: string) =>
+        ethrexFrame({
+          from: SENDER,
+          to: signal.toLowerCase(),
+          type: "STATICCALL",
+          accessedSlots: { ...emptyAccessedSlots(), reads: { [slot]: ["0x0"] } },
+        });
+      const service = new FrameTxValidationService(
+        fakeStakingRegistry(), // nobody staked
+        fakeReputationService(),
+        fakeNetworkConfig(),
+        fakeLogger()
+      );
+      const tx = baseTx([selfVerifyFrame()]);
+
+      const brokenAt = `0x${"0".repeat(64)}`;
+      const listed = ethrexFrame({ from: ENTRY_POINT, to: SENDER, calls: [readOf(brokenAt)] });
+      await expect(service.validate(tx, fakeEthrexResult([listed]))).resolves.toMatchObject({
+        mempoolMembership: { [STANDARD_MEMPOOL_ID]: true },
+      });
+
+      const description = `0x${"0".repeat(63)}1`;
+      const other = ethrexFrame({ from: ENTRY_POINT, to: SENDER, calls: [readOf(description)] });
+      await expect(service.validate(tx, fakeEthrexResult([other]))).rejects.toMatchObject({
+        code: RpcErrorCodes.INVALID_OPCODE,
+        message: expect.stringMatching(/unstaked .* slot/),
       });
     });
 

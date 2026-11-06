@@ -37,6 +37,7 @@ import { computeSigHash } from "../../FrameTxService/codec.js";
 import { validateSignature } from "../../FrameTxService/signature.js";
 import { selectPrefixTrace } from "../erc7562TraceAdapter.js";
 import { VIRTUAL_PRECOMPILES, virtualPrecompileCredit } from "../utils/virtualPrecompiles.js";
+import { BREAK_SIGNALS, onlyReadsBreakSignal } from "../utils/breakSignals.js";
 import {
   recognizeValidationPrefix,
   validateStructuralRules,
@@ -761,6 +762,18 @@ export class FrameTxValidationService {
           }
 
           if (addr === entryPoint) {
+            continue;
+          }
+
+          // Break signals: a listed signal's one slot may be read without a
+          // stake (see breakSignals.ts).
+          if (
+            onlyReadsBreakSignal(
+              addr,
+              { reads, writes, transientReads, transientWrites },
+              BREAK_SIGNALS
+            )
+          ) {
             continue;
           }
 
