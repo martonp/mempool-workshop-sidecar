@@ -27,16 +27,16 @@ export const VIRTUAL_PRECOMPILES: VirtualPrecompile[] = [
     // Falcon-512, ZKNOX falcon8. EIP-8052: hash-to-point 1000 + core 2000.
     address: "0x082195fEDF8BB5254A1dB077b17f1aEd77697A59",
     precompileGas: 3_000,
-    // Measured up to 635_154; raised so the credit also covers the margin a
-    // wallet declares for Falcon's 8- or 9-block hash-to-point, and for the
-    // larger deployment and checks of wallets with several schemes.
-    fallbackGasUsed: 750_000,
+    // Measured up to 635_154; raised so the credit covers the generous fixed
+    // gas limits the Agile Wallet extension declares.
+    fallbackGasUsed: 950_000,
   },
   {
     // SPHINCS- C13, SphincsC13Asm. No precompile proposal; an estimate.
     address: "0xa0a705b558Be9bEEC5B8BD7D5A96C792232be6A7",
     precompileGas: 4_000,
-    fallbackGasUsed: 97_298,
+    // Measured at 97_298; raised for the same generous limits.
+    fallbackGasUsed: 200_000,
   },
 ];
 
