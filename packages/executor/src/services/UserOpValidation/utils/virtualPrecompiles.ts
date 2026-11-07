@@ -42,10 +42,12 @@ export const VIRTUAL_PRECOMPILES: VirtualPrecompile[] = [
 ];
 
 /**
- * Extra verification gas the validation prefix earns: for every call into
- * a listed verifier in `prefixCalls` (the prefix frames' trace roots,
- * searched recursively), the gas it used minus the precompile price. Only
- * the outermost listed call counts; its subtree is not searched again.
+ * Extra verification gas the validation prefix earns: for the first call into
+ * each listed verifier in `prefixCalls` (the prefix frames' trace roots,
+ * searched recursively, in execution order), the gas it used minus the
+ * precompile price. Later calls into the same verifier earn nothing, so the
+ * credit is bounded by one verification per listed verifier. Only the
+ * outermost listed call counts; its subtree is not searched again.
  */
 export function virtualPrecompileCredit(
   prefixCalls: FrameCallTraceFrame[],
@@ -53,9 +55,13 @@ export function virtualPrecompileCredit(
 ): bigint {
   const zero = BigInt(0);
   const byAddress = new Map(precompiles.map((p) => [p.address.toLowerCase(), p]));
+  const credited = new Set<string>();
   const credit = (call: FrameCallTraceFrame): bigint => {
     const listed = call.to ? byAddress.get(call.to.toLowerCase()) : undefined;
     if (!listed) return (call.calls ?? []).reduce((sum, c) => sum + credit(c), zero);
+    const key = listed.address.toLowerCase();
+    if (credited.has(key)) return zero;
+    credited.add(key);
     const reported = call.gasUsed ? BigInt(call.gasUsed) : zero;
     const used = reported > zero ? reported : BigInt(listed.fallbackGasUsed);
     const saved = used - BigInt(listed.precompileGas);

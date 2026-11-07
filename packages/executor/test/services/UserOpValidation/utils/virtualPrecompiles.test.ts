@@ -57,6 +57,13 @@ describe("virtualPrecompileCredit", () => {
     expect(credit(deep, call(WALLET, { calls: [call(SPHINCS, { gasUsed: "0x1adb0" })] }))).toBe(497_000n + 106_000n);
   });
 
+  it("credits only the first call into each listed verifier", () => {
+    const repeated = call(WALLET, {
+      calls: [call(FALCON, { gasUsed: "0x7a120" }), call(FALCON, { gasUsed: "0x7a120" }), call(SPHINCS, { gasUsed: "0x1adb0" })],
+    });
+    expect(credit(repeated, call(WALLET, { calls: [call(FALCON, { gasUsed: "0x7a120" })] }))).toBe(497_000n + 106_000n);
+  });
+
   it("matches addresses case-insensitively", () => {
     const upper = `0x${FALCON.slice(2).toUpperCase()}` as `0x${string}`;
     expect(credit(call(WALLET, { calls: [call(upper, { gasUsed: "0x7a120" })] }))).toBe(497_000n);
